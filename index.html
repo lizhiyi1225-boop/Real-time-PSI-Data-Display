@@ -1,134 +1,130 @@
-"region_metadata": [
-    {
-      "name": "west",
-      "label_location": {
-        "latitude": 1.35735,
-        "longitude": 103.7
-      }
-    },{
-  
-    {
-      "name": "east",
-      "label_location": {
-        "latitude": 1.35735,
-        "longitude": 103.94
-      }
-    },
-    {
-      "name": "central",
-      "label_location": {
-        "latitude": 1.35735,
-        "longitude": 103.82
-      }
-    },
-    {
-      "name": "south",
-      "label_location": {
-        "latitude": 1.29587,
-        "longitude": 103.82
-      }
-    },
-    {
-      "name": "north",
-      "label_location": {
-        "latitude": 1.41803,
-        "longitude": 103.82
-      }
-    }
-  ],
-  "items": [
-    {
-      "timestamp": "2025-10-06T20:00:00+08:00",
-      "update_timestamp": "2025-10-06T20:01:01+08:00",
-      "readings": {
-        "o3_sub_index": {
-          "west": 3,
-          "east": 14,
-          "central": 7,
-          "south": 7,
-          "north": 9
-        },
-        "pm10_twenty_four_hourly": {
-          "west": 27,
-          "east": 33,
-          "central": 32,
-          "south": 26,
-          "north": 23
-        },
-        "pm10_sub_index": {
-          "west": 27,
-          "east": 33,
-          "central": 32,
-          "south": 26,
-          "north": 23
-        },
-        "co_sub_index": {
-          "west": 3,
-          "east": 4,
-          "central": 2,
-          "south": 4,
-          "north": 4
-        },
-        "pm25_twenty_four_hourly": {
-          "west": 18,
-          "east": 19,
-          "central": 22,
-          "south": 14,
-          "north": 16
-        },
-        "so2_sub_index": {
-          "west": 3,
-          "east": 2,
-          "central": 4,
-          "south": 2,
-          "north": 7
-        },
-        "co_eight_hour_max": {
-          "west": 0,
-          "east": 0,
-          "central": 0,
-          "south": 0,
-          "north": 0
-        },
-        "no2_one_hour_max": {
-          "west": 46,
-          "east": 40,
-          "central": 41,
-          "south": 36,
-          "north": 30
-        },
-        "so2_twenty_four_hourly": {
-          "west": 5,
-          "east": 4,
-          "central": 6,
-          "south": 3,
-          "north": 11
-        },
-        "pm25_sub_index": {
-          "west": 58,
-          "east": 59,
-          "central": 62,
-          "south": 53,
-          "north": 56
-        },
-        "psi_twenty_four_hourly": {
-          "west": 58,
-          "east": 59,
-          "central": 62,
-          "south": 53,
-          "north": 56
-        },
-        "o3_eight_hour_max": {
-          "west": 6,
-          "east": 32,
-          "central": 17,
-          "south": 16,
-          "north": 21
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PSI Readings — data.gov.sg</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+    h1 { font-size: 1.5rem; }
+    a { color: #0066cc; }
+    .meta { margin-top: 8px; color: #444; }
+    .error { margin-top: 12px; color: red; display: none; }
+    table { border-collapse: collapse; width: 100%; max-width: 1000px; margin-top: 16px; }
+    th, td { border: 1px solid #bbb; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    caption { caption-side: bottom; margin-top: 8px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Real-time PSI Readings</h1>
+  <div class="meta">Source: <a href="https://api.data.gov.sg/v1/environment/psi" target="_blank">api.data.gov.sg/v1/environment/psi</a></div>
+  <div id="metaInfo" class="meta"></div>
+  <div id="errorMsg" class="error"></div>
+  <div id="tableContainer"></div>
+
+  <script>
+    (async function() {
+      const regions = ["national", "north", "south", "east", "west", "central"];
+      const readingKeys = [
+        "o3_sub_index",
+        "pm10_twenty_four_hourly",
+        "pm10_sub_index",
+        "co_sub_index",
+        "pm25_twenty_four_hourly",
+        "so2_sub_index",
+        "co_eight_hour_max",
+        "no2_one_hour_max",
+        "so2_twenty_four_hourly",
+        "pm25_sub_index",
+        "o3_eight_hour_max",
+        "psi_twenty_four_hourly"
+      ];
+
+      const metaInfoDiv = document.getElementById("metaInfo");
+      const errorDiv = document.getElementById("errorMsg");
+      const tableDiv = document.getElementById("tableContainer");
+
+      async function fetchPSI() {
+        const url = "https://api.data.gov.sg/v1/environment/psi";
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          throw new Error("HTTP error: " + resp.status);
         }
+        return resp.json();
       }
-    }
-  ],
-  "api_info": {
-    "status": "healthy"
-  }
-}
+
+      function getLatestItem(json) {
+        if (!json || !json.items || !Array.isArray(json.items)) return null;
+        if (json.items.length === 0) return null;
+        // 取最后一项（时间最晚）
+        return json.items[json.items.length - 1];
+      }
+
+      function buildTable(readings) {
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const trh = document.createElement("tr");
+        // 表头：第一列是 “reading”，后面是区域名
+        let th0 = document.createElement("th");
+        th0.textContent = "Reading";
+        trh.appendChild(th0);
+        regions.forEach(r => {
+          let th = document.createElement("th");
+          th.textContent = r;
+          trh.appendChild(th);
+        });
+        thead.appendChild(trh);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        readingKeys.forEach(key => {
+          const tr = document.createElement("tr");
+          const tdKey = document.createElement("td");
+          tdKey.textContent = key;
+          tr.appendChild(tdKey);
+
+          const obj = readings[key] || {};
+          regions.forEach(r => {
+            const td = document.createElement("td");
+            // 如果这个 region 没有值，就显示 “-”
+            td.textContent = (obj[r] != null ? obj[r] : "-");
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        // 可选：加一个 caption
+        const cap = document.createElement("caption");
+        cap.textContent = "12 readings × 6 regions (latest)";
+        table.appendChild(cap);
+
+        return table;
+      }
+
+      try {
+        const json = await fetchPSI();
+        const latest = getLatestItem(json);
+        if (!latest) {
+          errorDiv.style.display = "block";
+          errorDiv.textContent = "No data in JSON response.";
+          return;
+        }
+        const ts = latest.timestamp || "";
+        const status = (json.api_info && json.api_info.status) || "";
+        metaInfoDiv.textContent = "Timestamp: " + ts + " | API status: " + status;
+
+        const tbl = buildTable(latest.readings || {});
+        tableDiv.appendChild(tbl);
+
+      } catch (err) {
+        errorDiv.style.display = "block";
+        errorDiv.textContent = "Failed to fetch PSI data: " + err.message;
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>
